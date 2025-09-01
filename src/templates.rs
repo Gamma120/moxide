@@ -30,7 +30,9 @@ impl From<&Window> for Table<String, String> {
 
 pub fn find_template(name: &str) -> Option<Template> {
     let templates_dir = get_config_dir().join("templates/");
+
     let file_path = templates_dir.join(format!("{name}.yaml"));
+
     let is_valid_path = file_path.exists() && file_path.is_file();
     let matching_path = is_valid_path.then_some(file_path);
 
@@ -47,8 +49,7 @@ pub fn find_template(name: &str) -> Option<Template> {
     fs::read_dir(&templates_dir)
         .exit(1, "Can't read template config")
         .find_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
+            let path = entry.ok()?.path();
             if !path.is_file() {
                 return None;
             }
@@ -59,22 +60,20 @@ pub fn find_template(name: &str) -> Option<Template> {
         })
 }
 
-pub fn parse_template_config() -> Vec<Template> {
+pub fn parse_template_config() -> impl Iterator<Item = Template> {
     let templates_content =
         fs::read_dir(get_config_dir().join("templates/")).exit(1, "Can't read template config");
 
-    templates_content
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if !path.is_file() {
-                return None;
-            }
+    templates_content.filter_map(|entry| {
+        let entry = entry.ok()?;
+        let path = entry.path();
+        if !path.is_file() {
+            return None;
+        }
 
-            let content = fs::read_to_string(path).ok()?;
-            serde_yaml::from_str::<Template>(&content).ok()
-        })
-        .collect()
+        let content = fs::read_to_string(path).ok()?;
+        serde_yaml::from_str::<Template>(&content).ok()
+    })
 }
 
 pub fn apply_windows<'a>(
