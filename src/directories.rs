@@ -1,14 +1,16 @@
-use thiserror::Error;
-
 use crate::{
     helpers::{get_config_dir, Exit},
     widgets::table::Table,
 };
 use std::{
-    collections::{hash_map::Keys, HashMap},
+    collections::{
+        hash_map::{Entry, Keys},
+        HashMap,
+    },
     fs,
     path::PathBuf,
 };
+use thiserror::Error;
 
 #[derive(Debug, Default, Clone)]
 pub struct Directories(HashMap<String, PathBuf>);
@@ -59,29 +61,35 @@ pub fn parse_directory_config() -> Result<Directories, ParseDirectoryError> {
     let mut hm = HashMap::new();
 
     for line in file_content.lines() {
+        // Comments
         if line.starts_with('#') {
-            // Comments
             continue;
         }
 
-        let (name, dir) = line.split_once(':').map_or_else(
-            || {
+        let (name, dir) = match line.split_once(':') {
+            Some((name, path)) => (name.trim().to_string(), PathBuf::from(path.trim())),
+            None => {
                 let path = PathBuf::from(line.trim());
-                let name = path
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .ok_or_else(|| ParseDirectoryError::NoDirName { dir: path.clone() })?;
-                Ok((name.to_string(), path))
-            },
-            |(name, path)| Ok((name.trim().to_string(), PathBuf::from(path.trim()))),
-        )?;
+                let name = path.file_name().and_then(|name| name.to_str());
 
-        // TODO: Remove cloning
-        if let Some(prev) = hm.insert(name.clone(), dir.clone()) {
-            return Err(ParseDirectoryError::DuplicateName {
-                name: name.to_string(),
-                values: (prev, dir),
-            });
+                if let Some(name) = name {
+                    (name.to_string(), path)
+                } else {
+                    return Err(ParseDirectoryError::NoDirName { dir: path.clone() });
+                }
+            }
+        };
+
+        match hm.entry(name) {
+            Entry::Vacant(entry) => {
+                entry.insert(dir);
+            }
+            Entry::Occupied(entry) => {
+                return Err(ParseDirectoryError::DuplicateName {
+                    name: entry.key().clone(),
+                    values: (entry.get().clone(), dir),
+                });
+            }
         }
     }
 

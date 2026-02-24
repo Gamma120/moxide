@@ -5,6 +5,7 @@ use crate::{
     tmux::{attach, session_exists},
     widgets::table::Table,
 };
+use itertools::Itertools;
 use std::path::PathBuf;
 use tmux_interface::{NewSession, Tmux};
 
@@ -28,12 +29,9 @@ fn list_handler(minimal: bool) {
 }
 
 fn format_dirs_minimal(dirs: Directories) -> String {
-    let dirs_formatted: Vec<_> = dirs
-        .into_iter()
+    dirs.into_iter()
         .map(|(name, path)| format!("\"{}\" {}", name, path.display()))
-        .collect();
-
-    dirs_formatted.join("\n")
+        .join("\n")
 }
 
 fn start_handler(args: &StartDirectoryArgs) {

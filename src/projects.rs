@@ -119,22 +119,20 @@ pub fn find_project(name: &str) -> Option<Project> {
         })
 }
 
-pub fn parse_project_config() -> Vec<Project> {
+pub fn parse_project_config() -> impl Iterator<Item = Project> {
     let projects_dir = get_config_dir().join("projects/");
     let projects_content = fs::read_dir(&projects_dir).exit(1, "Can't read template config");
 
-    projects_content
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if !path.is_file() {
-                return None;
-            }
+    projects_content.filter_map(|entry| {
+        let entry = entry.ok()?;
+        let path = entry.path();
+        if !path.is_file() {
+            return None;
+        }
 
-            let content = fs::read_to_string(&path).ok()?;
-            serde_yaml::from_str::<Project>(&content).ok()
-        })
-        .collect()
+        let content = fs::read_to_string(&path).ok()?;
+        serde_yaml::from_str::<Project>(&content).ok()
+    })
 }
 
 #[cfg(test)]

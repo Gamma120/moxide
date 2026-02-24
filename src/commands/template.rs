@@ -18,16 +18,13 @@ pub fn template_handler(action: TemplateCommands) {
 
 fn list_handler(minimal: bool, all: bool) {
     let templates = parse_template_config();
-    let filtered = if all {
-        templates
-    } else {
-        templates
-            .into_iter()
-            .filter(|t| !t.hidden.unwrap_or(false))
-            .collect()
-    };
 
-    for template in filtered {
+    for template in templates {
+        let is_hidden = template.hidden.unwrap_or(false);
+        if is_hidden && !all {
+            continue;
+        }
+
         if minimal {
             println!("{}", template.name);
         } else {
